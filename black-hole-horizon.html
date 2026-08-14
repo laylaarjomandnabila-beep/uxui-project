@@ -1,0 +1,1104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Black Hole Horizon — Cosmic Interactive System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Roboto+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --void:#050508;
+    --panel:#0b0d14;
+    --panel-border:#1c2130;
+    --cyan:#3EE8E0;
+    --cyan-dim:#1c5a58;
+    --orange:#FF7A3D;
+    --white:#F4F6FA;
+    --muted:#7C8496;
+    --muted-dim:#4A5063;
+    --font-display:'Montserrat', sans-serif;
+    --font-mono:'Roboto Mono', monospace;
+    --glow-cyan: 0 0 24px rgba(62,232,224,0.45);
+    --glow-orange: 0 0 24px rgba(255,122,61,0.4);
+  }
+
+  *{margin:0;padding:0;box-sizing:border-box;}
+
+  html,body{
+    width:100%;height:100%;
+    background:var(--void);
+    color:var(--white);
+    font-family:var(--font-display);
+    overflow:hidden;
+  }
+
+  .stage{
+    position:relative;
+    width:100vw;
+    height:100vh;
+    min-height:600px;
+    background:var(--void);
+  }
+
+  /* ---------- shared HUD chrome ---------- */
+  .topbar{
+    position:absolute;
+    top:0;left:0;right:0;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:28px 48px;
+    z-index:5;
+  }
+  .topbar .brand{
+    font-weight:800;
+    letter-spacing:0.08em;
+    font-size:14px;
+    text-transform:uppercase;
+  }
+  .topbar .brand small{
+    display:block;
+    font-family:var(--font-mono);
+    font-weight:400;
+    letter-spacing:0.05em;
+    font-size:11px;
+    color:var(--muted);
+    text-transform:none;
+    margin-top:2px;
+  }
+  .status-tag{
+    font-family:var(--font-mono);
+    font-size:12px;
+    letter-spacing:0.05em;
+    color:var(--cyan);
+    display:flex;
+    align-items:center;
+    gap:8px;
+    text-transform:uppercase;
+  }
+  .status-tag .dot{
+    width:7px;height:7px;border-radius:50%;
+    background:var(--cyan);
+    box-shadow:var(--glow-cyan);
+    animation:pulse 2s infinite ease-in-out;
+  }
+  .status-tag.orange{color:var(--orange);}
+  .status-tag.orange .dot{background:var(--orange);box-shadow:var(--glow-orange);}
+
+  .bottombar{
+    position:absolute;
+    bottom:0;left:0;right:0;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:20px 48px;
+    border-top:1px solid var(--panel-border);
+    font-family:var(--font-mono);
+    font-size:11px;
+    letter-spacing:0.04em;
+    color:var(--muted-dim);
+    text-transform:uppercase;
+    z-index:5;
+  }
+  .bottombar .online{
+    color:var(--cyan);
+    font-weight:600;
+    display:flex;align-items:center;gap:8px;
+  }
+  .bottombar .online .dot{
+    width:6px;height:6px;border-radius:50%;
+    background:var(--cyan);
+    box-shadow:var(--glow-cyan);
+  }
+
+  @keyframes pulse{
+    0%,100%{opacity:1;}
+    50%{opacity:0.35;}
+  }
+
+  /* ---------- screen switching ---------- */
+  .screen{
+    position:absolute;
+    inset:0;
+    opacity:0;
+    visibility:hidden;
+    transform:scale(1.02);
+    transition:opacity 0.6s ease, transform 0.6s ease, visibility 0.6s;
+    pointer-events:none;
+  }
+  .screen.active{
+    opacity:1;
+    visibility:visible;
+    transform:scale(1);
+    pointer-events:auto;
+  }
+
+  /* ================= SCREEN 1: ATTRACT / IDLE ================= */
+  #screen-idle{
+    background:
+      radial-gradient(ellipse at center 60%, rgba(62,232,224,0.06) 0%, transparent 55%),
+      linear-gradient(180deg, #050508 0%, #070a12 60%, #050508 100%);
+  }
+  .idle-bg{
+    position:absolute;
+    inset:0;
+    background-image: url('https://images.unsplash.com/photo-1462331940025-496dfbfc7564?q=80&w=1920&auto=format&fit=crop');
+    background-size:cover;
+    background-position:center;
+    opacity:0.5;
+    filter:saturate(1.1) brightness(0.85);
+  }
+  .idle-bg::after{
+    content:'';
+    position:absolute;inset:0;
+    background:linear-gradient(180deg, rgba(5,5,8,0.55) 0%, rgba(5,5,8,0.25) 40%, rgba(5,5,8,0.75) 100%);
+  }
+  .idle-content{
+    position:relative;
+    z-index:2;
+    height:100%;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    padding:0 40px;
+  }
+  .idle-content h1{
+    font-size:clamp(34px, 5.2vw, 68px);
+    font-weight:800;
+    letter-spacing:0.01em;
+    line-height:1.08;
+    text-shadow:0 0 40px rgba(0,0,0,0.6);
+    max-width:1100px;
+  }
+  .idle-content p{
+    margin-top:22px;
+    max-width:560px;
+    font-family:var(--font-mono);
+    font-size:14px;
+    line-height:1.7;
+    color:var(--muted);
+    letter-spacing:0.02em;
+  }
+  .gaze-target{
+    margin-top:56px;
+    width:96px;height:96px;
+    border-radius:50%;
+    border:2px solid var(--cyan);
+    display:flex;align-items:center;justify-content:center;
+    position:relative;
+    cursor:pointer;
+    background:radial-gradient(circle, rgba(62,232,224,0.12) 0%, transparent 70%);
+    box-shadow:var(--glow-cyan);
+    transition:transform 0.25s ease;
+  }
+  .gaze-target:hover{transform:scale(1.06);}
+  .gaze-target:active{transform:scale(0.97);}
+  .gaze-target::before{
+    content:'';
+    position:absolute;
+    inset:-14px;
+    border:1px dashed rgba(62,232,224,0.5);
+    border-radius:50%;
+    animation:spin 14s linear infinite;
+  }
+  .gaze-target .core{
+    width:10px;height:10px;
+    border-radius:50%;
+    background:var(--white);
+    box-shadow:0 0 12px rgba(255,255,255,0.9);
+  }
+  .gaze-corner{
+    position:absolute;
+    width:16px;height:16px;
+    border-color:var(--cyan);
+    opacity:0.9;
+  }
+  .gaze-corner.tl{top:-10px;left:-10px;border-top:2px solid;border-left:2px solid;}
+  .gaze-corner.tr{top:-10px;right:-10px;border-top:2px solid;border-right:2px solid;}
+  .gaze-corner.bl{bottom:-10px;left:-10px;border-bottom:2px solid;border-left:2px solid;}
+  .gaze-corner.br{bottom:-10px;right:-10px;border-bottom:2px solid;border-right:2px solid;}
+  @keyframes spin{ from{transform:rotate(0deg);} to{transform:rotate(360deg);} }
+
+  .idle-label{
+    margin-top:18px;
+    font-family:var(--font-mono);
+    font-size:13px;
+    letter-spacing:0.14em;
+    color:var(--cyan);
+    text-transform:uppercase;
+  }
+
+  /* ================= SCREEN 2: CALIBRATION ================= */
+  #screen-calibration{
+    background:var(--void);
+    display:flex;
+  }
+  .calib-content{
+    margin:auto;
+    text-align:center;
+    width:100%;
+    max-width:820px;
+    padding:0 30px;
+  }
+  .eyebrow{
+    font-family:var(--font-mono);
+    font-size:12px;
+    letter-spacing:0.18em;
+    color:var(--cyan);
+    text-transform:uppercase;
+    margin-bottom:14px;
+  }
+  .calib-content h2{
+    font-size:clamp(26px,3.4vw,40px);
+    font-weight:700;
+  }
+  .calib-content .sub{
+    margin-top:14px;
+    font-family:var(--font-mono);
+    font-size:13px;
+    color:var(--muted);
+  }
+  .calib-track{
+    position:relative;
+    height:1px;
+    background:var(--panel-border);
+    margin:80px 0 50px;
+  }
+  .calib-dot{
+    position:absolute;
+    top:50%;left:78%;
+    transform:translate(-50%,-50%);
+    width:52px;height:52px;
+    border-radius:50%;
+    border:2px solid var(--cyan);
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:var(--glow-cyan);
+    background:rgba(62,232,224,0.08);
+    animation:driftX 4.5s ease-in-out infinite alternate;
+  }
+  .calib-dot::before{
+    content:'';
+    position:absolute;inset:-10px;
+    border:1px dashed rgba(62,232,224,0.45);
+  }
+  .calib-dot span{
+    width:7px;height:7px;border-radius:50%;
+    background:var(--white);
+  }
+  @keyframes driftX{
+    from{left:16%;}
+    to{left:82%;}
+  }
+  .align-row{
+    display:flex;
+    justify-content:space-between;
+    font-family:var(--font-mono);
+    font-size:12px;
+    color:var(--muted);
+    text-transform:uppercase;
+    letter-spacing:0.05em;
+    margin-bottom:8px;
+  }
+  .align-row .pct{color:var(--cyan);font-weight:600;}
+  .progress-track{
+    height:6px;
+    border-radius:4px;
+    background:var(--panel-border);
+    overflow:hidden;
+  }
+  .progress-fill{
+    height:100%;
+    width:65%;
+    background:linear-gradient(90deg, var(--cyan-dim), var(--cyan));
+    box-shadow:var(--glow-cyan);
+    border-radius:4px;
+    transition:width 3s ease;
+  }
+  .skip-btn{
+    margin-top:56px;
+    display:inline-flex;
+    align-items:center;
+    gap:10px;
+    background:var(--panel);
+    border:1px solid var(--panel-border);
+    color:var(--white);
+    font-family:var(--font-display);
+    font-weight:600;
+    font-size:14px;
+    padding:16px 30px;
+    border-radius:10px;
+    cursor:pointer;
+    transition:border-color 0.2s ease, transform 0.2s ease;
+  }
+  .skip-btn:hover{border-color:var(--cyan); transform:translateY(-1px);}
+  .skip-btn .tag{
+    font-family:var(--font-mono);
+    font-size:11px;
+    color:var(--cyan);
+    text-transform:uppercase;
+  }
+
+  /* ================= SCREEN 3: MAIN DASHBOARD ================= */
+  #screen-dashboard{
+    background:var(--void);
+    padding:100px 48px 90px;
+    display:flex;
+    flex-direction:column;
+  }
+  .dash-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    margin-bottom:28px;
+  }
+  .dash-header h2{
+    font-size:22px;
+    font-weight:800;
+    letter-spacing:0.02em;
+  }
+  .dash-header .sector{
+    font-family:var(--font-mono);
+    font-size:11px;
+    color:var(--muted);
+    letter-spacing:0.05em;
+    margin-top:4px;
+    text-transform:uppercase;
+  }
+  .dash-readout{
+    text-align:right;
+    font-family:var(--font-mono);
+  }
+  .dash-readout .r1{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;}
+  .dash-readout .r1 b{color:var(--cyan);font-weight:600;}
+  .dash-readout .r2{margin-top:6px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;}
+  .dash-readout .r2 b{color:var(--orange);font-weight:700;}
+
+  .dash-grid{
+    flex:1;
+    display:grid;
+    grid-template-columns: 280px 1fr 280px;
+    gap:22px;
+    min-height:0;
+  }
+  .panel{
+    background:var(--panel);
+    border:1px solid var(--panel-border);
+    border-radius:12px;
+    padding:22px;
+  }
+  .panel h3{
+    font-size:12px;
+    letter-spacing:0.1em;
+    text-transform:uppercase;
+    margin-bottom:8px;
+  }
+  .panel p.desc{
+    font-family:var(--font-mono);
+    font-size:11px;
+    color:var(--muted);
+    line-height:1.6;
+    margin-bottom:20px;
+  }
+  .stat-card{
+    background:rgba(255,255,255,0.02);
+    border:1px solid var(--panel-border);
+    border-radius:8px;
+    padding:14px 16px;
+    margin-bottom:14px;
+  }
+  .stat-card .label{
+    font-family:var(--font-mono);
+    font-size:10px;
+    letter-spacing:0.08em;
+    color:var(--orange);
+    text-transform:uppercase;
+  }
+  .stat-card.cyan .label{color:var(--cyan);}
+  .stat-card .value{
+    font-family:var(--font-mono);
+    font-size:24px;
+    font-weight:600;
+    margin-top:6px;
+  }
+  .stat-card .foot{
+    font-family:var(--font-mono);
+    font-size:10px;
+    color:var(--muted-dim);
+    margin-top:4px;
+    text-transform:uppercase;
+    letter-spacing:0.04em;
+  }
+
+  .viewport{
+    position:relative;
+    border-radius:14px;
+    overflow:hidden;
+    background:
+      radial-gradient(circle at 50% 50%, rgba(62,232,224,0.10) 0%, transparent 45%),
+      #04040a;
+    border:1px solid var(--panel-border);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  .viewport .rings{
+    position:absolute;
+    width:120%;height:120%;
+    border-radius:50%;
+    border:1px solid rgba(62,232,224,0.08);
+  }
+  .viewport .rings.r2{width:90%;height:90%;}
+  .viewport .rings.r3{width:60%;height:60%;}
+  .blackhole{
+    position:relative;
+    width:200px;height:200px;
+    border-radius:50%;
+    background:radial-gradient(circle at 40% 40%, #111, #000 60%);
+    box-shadow:
+      0 0 0 1px rgba(255,255,255,0.03),
+      0 0 60px 14px rgba(62,232,224,0.35),
+      0 0 120px 40px rgba(255,122,61,0.12);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .blackhole::before{
+    content:'';
+    position:absolute;
+    width:340px;height:110px;
+    border-radius:50%;
+    background:conic-gradient(from 90deg, rgba(62,232,224,0.85), rgba(255,122,61,0.6), rgba(62,232,224,0.85));
+    filter:blur(6px);
+    opacity:0.55;
+    z-index:-1;
+    animation:diskspin 18s linear infinite;
+  }
+  @keyframes diskspin{ from{transform:rotate(0deg);} to{transform:rotate(360deg);} }
+  .gaze-reticle{
+    width:48px;height:48px;
+    border-radius:50%;
+    border:2px dashed var(--cyan);
+    display:flex;align-items:center;justify-content:center;
+    position:relative;
+  }
+  .gaze-reticle span{
+    width:8px;height:8px;border-radius:50%;
+    background:var(--white);
+    box-shadow:0 0 10px rgba(255,255,255,0.8);
+  }
+  .gaze-reticle .rlabel{
+    position:absolute;
+    top:60px;
+    font-family:var(--font-mono);
+    font-size:9px;
+    letter-spacing:0.1em;
+    color:var(--cyan);
+    text-transform:uppercase;
+    white-space:nowrap;
+  }
+  .hud-corner{
+    position:absolute;
+    font-family:var(--font-mono);
+    font-size:9px;
+    color:rgba(62,232,224,0.5);
+    letter-spacing:0.06em;
+  }
+  .hud-corner.hc-tl{top:16px;left:16px;}
+  .hud-corner.hc-tr{top:16px;right:16px;text-align:right;}
+
+  .slider-row{margin-top:6px;}
+  .slider-row .label-row{
+    display:flex;justify-content:space-between;
+    font-family:var(--font-mono);
+    font-size:10px;
+    color:var(--muted);
+    text-transform:uppercase;
+    letter-spacing:0.06em;
+    margin-bottom:8px;
+  }
+  .slider-row .label-row b{color:var(--orange);font-size:14px;}
+  .slider-track{
+    height:4px;border-radius:2px;
+    background:var(--panel-border);
+    position:relative;
+  }
+  .slider-fill{
+    position:absolute;left:0;top:0;bottom:0;
+    width:47%;
+    border-radius:2px;
+    background:linear-gradient(90deg, var(--cyan), var(--orange));
+  }
+  .slider-fill::after{
+    content:'';
+    position:absolute;
+    right:-6px;top:50%;
+    transform:translateY(-50%);
+    width:13px;height:13px;
+    border-radius:50%;
+    background:var(--orange);
+    box-shadow:var(--glow-orange);
+  }
+
+  /* ================= SCREEN 4: SUMMARY ================= */
+  #screen-summary{
+    background:var(--void);
+    padding:100px 48px 90px;
+    display:flex;
+    flex-direction:column;
+  }
+  .summary-header{margin-bottom:30px;}
+  .summary-header h2{font-size:26px;font-weight:800;}
+  .stat-strip{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:18px;
+    margin-bottom:22px;
+  }
+  .stat-tile{
+    background:var(--panel);
+    border:1px solid var(--panel-border);
+    border-radius:10px;
+    padding:18px 20px;
+  }
+  .stat-tile .label{
+    font-family:var(--font-mono);
+    font-size:10px;
+    letter-spacing:0.07em;
+    color:var(--muted);
+    text-transform:uppercase;
+  }
+  .stat-tile .value{
+    font-family:var(--font-mono);
+    font-size:26px;
+    font-weight:700;
+    color:var(--orange);
+    margin-top:8px;
+  }
+  .stat-tile.cyan .value{color:var(--cyan);}
+  .stat-tile .foot{
+    font-size:11px;color:var(--muted-dim);
+    margin-top:6px;
+    font-family:var(--font-mono);
+  }
+  .summary-lower{
+    flex:1;
+    display:grid;
+    grid-template-columns:1fr 300px;
+    gap:20px;
+    min-height:0;
+  }
+  .chart-panel h3, .qr-panel h3{
+    font-size:12px;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:22px;
+  }
+  .chart-panel .axis-note{
+    float:right;
+    font-family:var(--font-mono);
+    font-size:10px;
+    color:var(--cyan);
+    text-transform:uppercase;
+    margin-top:-30px;
+  }
+  .bars{
+    display:flex;
+    align-items:flex-end;
+    gap:14px;
+    height:180px;
+    margin-top:20px;
+  }
+  .bar{
+    flex:1;
+    background:var(--cyan);
+    border-radius:4px 4px 0 0;
+    position:relative;
+    opacity:0.9;
+  }
+  .bar.peak{background:var(--orange);}
+  .bar .t{
+    position:absolute;
+    bottom:-24px;left:50%;
+    transform:translateX(-50%);
+    font-family:var(--font-mono);
+    font-size:10px;
+    color:var(--muted-dim);
+  }
+  .qr-panel{display:flex;flex-direction:column;}
+  .qr-panel .desc{
+    font-family:var(--font-mono);
+    font-size:11px;color:var(--muted);
+    line-height:1.6;margin-bottom:18px;
+  }
+  .qr-box{
+    width:130px;height:130px;
+    background:
+      repeating-linear-gradient(90deg, #fff 0 4px, #000 4px 8px),
+      repeating-linear-gradient(0deg, #fff 0 4px, transparent 4px 8px);
+    background-blend-mode:difference;
+    border-radius:6px;
+    margin-bottom:16px;
+  }
+  .qr-panel .scan{
+    color:var(--cyan);
+    font-family:var(--font-mono);
+    font-size:12px;
+    font-weight:600;
+    letter-spacing:0.05em;
+    text-transform:uppercase;
+  }
+  .qr-panel .avail{
+    font-family:var(--font-mono);
+    font-size:10px;
+    color:var(--muted-dim);
+    margin-top:8px;
+  }
+
+  /* ================= SCREEN 5: EXIT ================= */
+  #screen-exit{
+    background:var(--void);
+  }
+  .exit-bg{
+    position:absolute;inset:0;
+    background-image:url('https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?q=80&w=1920&auto=format&fit=crop');
+    background-size:cover;
+    background-position:center;
+    opacity:0.55;
+    filter:saturate(1.2) brightness(0.75);
+  }
+  .exit-bg::after{
+    content:'';
+    position:absolute;inset:0;
+    background:linear-gradient(180deg, rgba(5,5,8,0.5) 0%, rgba(5,5,8,0.35) 45%, rgba(5,5,8,0.8) 100%);
+  }
+  .exit-content{
+    position:relative;z-index:2;
+    height:100%;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    padding:0 40px;
+  }
+  .session-pill{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    border:1px solid var(--cyan);
+    border-radius:20px;
+    padding:8px 18px;
+    font-family:var(--font-mono);
+    font-size:11px;
+    letter-spacing:0.08em;
+    color:var(--cyan);
+    text-transform:uppercase;
+    margin-bottom:26px;
+    box-shadow:inset 0 0 12px rgba(62,232,224,0.15);
+  }
+  .exit-content h1{
+    font-size:clamp(30px,4.6vw,52px);
+    font-weight:800;
+  }
+  .exit-content .sub{
+    margin-top:18px;
+    max-width:520px;
+    font-family:var(--font-mono);
+    font-size:13px;
+    line-height:1.7;
+    color:var(--muted);
+  }
+  .exit-lower{
+    position:absolute;
+    bottom:120px;left:0;right:0;
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    padding:0 60px;
+    z-index:2;
+  }
+  .reset-block{text-align:center;}
+  .reset-block .gaze-target{margin-top:0;}
+  .reset-block .idle-label{margin-top:14px;}
+  .giftshop-card{
+    background:rgba(11,13,20,0.85);
+    backdrop-filter:blur(6px);
+    border:1px solid var(--panel-border);
+    border-radius:12px;
+    padding:22px 24px;
+    max-width:300px;
+    text-align:left;
+  }
+  .giftshop-card h4{font-size:13px;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:10px;}
+  .giftshop-card p{
+    font-family:var(--font-mono);
+    font-size:11.5px;
+    color:var(--muted);
+    line-height:1.6;
+    margin-bottom:16px;
+  }
+  .gift-btn{
+    background:var(--orange);
+    color:#1a0d05;
+    border:none;
+    font-weight:700;
+    font-size:13px;
+    font-family:var(--font-display);
+    padding:12px 20px;
+    border-radius:8px;
+    cursor:pointer;
+    box-shadow:var(--glow-orange);
+    transition:transform 0.2s ease;
+  }
+  .gift-btn:hover{transform:translateY(-1px);}
+
+  /* dev nav — remove/hide for kiosk deployment */
+  .devnav{
+    position:fixed;
+    top:0;left:50%;
+    transform:translateX(-50%);
+    display:flex;gap:6px;
+    background:#000;
+    padding:6px;
+    border-radius:0 0 10px 10px;
+    z-index:999;
+    border:1px solid var(--panel-border);
+    border-top:none;
+  }
+  .devnav button{
+    background:transparent;
+    border:1px solid var(--panel-border);
+    color:var(--muted);
+    font-family:var(--font-mono);
+    font-size:10px;
+    padding:6px 10px;
+    border-radius:6px;
+    cursor:pointer;
+  }
+  .devnav button.on{color:var(--cyan);border-color:var(--cyan);}
+
+  @media (max-width: 900px){
+    .dash-grid{grid-template-columns:1fr;}
+    .stat-strip{grid-template-columns:repeat(2,1fr);}
+    .summary-lower{grid-template-columns:1fr;}
+    .exit-lower{flex-direction:column;align-items:center;gap:30px;position:relative;bottom:auto;margin-top:40px;}
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:0.01ms !important; animation-iteration-count:1 !important; transition-duration:0.01ms !important;}
+  }
+</style>
+</head>
+<body>
+
+<div class="stage">
+
+  <!-- dev-only nav to preview all 5 screens; remove in kiosk build -->
+  <nav class="devnav" aria-label="Screen preview navigation">
+    <button data-goto="screen-idle" class="on">1 Idle</button>
+    <button data-goto="screen-calibration">2 Calibrate</button>
+    <button data-goto="screen-dashboard">3 Dashboard</button>
+    <button data-goto="screen-summary">4 Summary</button>
+    <button data-goto="screen-exit">5 Exit</button>
+  </nav>
+
+  <!-- ============ SCREEN 1: ATTRACT / IDLE ============ -->
+  <section id="screen-idle" class="screen active" aria-label="Attract screen">
+    <div class="idle-bg" aria-hidden="true"></div>
+    <div class="topbar">
+      <div class="brand">Cosmic Interactive System</div>
+      <div class="status-tag"><span class="dot"></span> Idle / Screensaver Mode</div>
+    </div>
+    <div class="idle-content">
+      <h1>Welcome to Black Hole Horizon</h1>
+      <p>Step up to the sensors to begin a journey through gravitational time dilation. Control the warp of reality with your gaze.</p>
+      <button class="gaze-target" id="btn-begin" aria-label="Look here to begin">
+        <span class="gaze-corner tl"></span><span class="gaze-corner tr"></span>
+        <span class="gaze-corner bl"></span><span class="gaze-corner br"></span>
+        <span class="core"></span>
+      </button>
+      <div class="idle-label">Look here to begin</div>
+    </div>
+    <div class="bottombar">
+      <div class="online"><span class="dot"></span> Exhibit System Online &nbsp;•&nbsp; Gaze_Tracking_Sensors_Stable // 120 FPS</div>
+      <div>Cosmic Exhibits Series • Horizon v2.1</div>
+    </div>
+  </section>
+
+  <!-- ============ SCREEN 2: CALIBRATION ============ -->
+  <section id="screen-calibration" class="screen" aria-label="Calibration screen">
+    <div class="topbar" style="visibility:hidden;"><div></div></div>
+    <div class="calib-content">
+      <div class="eyebrow">System Initialization</div>
+      <h2>Calibrating Gaze Sensors</h2>
+      <p class="sub">Follow the moving star across the horizon with your eyes. Keep your head stable.</p>
+
+      <div class="calib-track">
+        <div class="calib-dot"><span></span></div>
+      </div>
+
+      <div class="align-row">
+        <span>Alignment Status</span>
+        <span class="pct">65% Completed</span>
+      </div>
+      <div class="progress-track"><div class="progress-fill" id="calib-fill"></div></div>
+
+      <button class="skip-btn" id="btn-skip-calibration">
+        Skip Calibration / Manual Touch <span class="tag">[Tap Screen]</span>
+      </button>
+    </div>
+    <div class="bottombar">
+      <div class="online"><span class="dot"></span> Exhibit System Online &nbsp;•&nbsp; Gaze_Tracking_Sensors_Stable // 120 FPS</div>
+      <div>Cosmic Exhibits Series • Horizon v2.1</div>
+    </div>
+  </section>
+
+  <!-- ============ SCREEN 3: MAIN DASHBOARD ============ -->
+  <section id="screen-dashboard" class="screen" aria-label="Active experience dashboard">
+    <div class="topbar">
+      <div class="brand">Black Hole Horizon<small>Simulation Sector: Event Horizon Apex</small></div>
+      <div class="dash-readout">
+        <div class="r1">Sensor Gaze Target &nbsp; <b>X: -0.428 // Y: +0.119</b></div>
+        <div class="r2">Event Time State &nbsp; <b>Gravitationally Warped</b></div>
+      </div>
+    </div>
+
+    <div class="dash-grid">
+      <div class="panel">
+        <h3>Temporal Dilation</h3>
+        <p class="desc">Observe the dramatic divergence between local spacecraft duration and the universe beyond.</p>
+        <div class="stat-card">
+          <div class="label">Outside Universe Time</div>
+          <div class="value">47y 203d 14h</div>
+          <div class="foot">[ Accelerating Exponentially ]</div>
+        </div>
+        <div class="stat-card cyan">
+          <div class="label">Your Local Time</div>
+          <div class="value" id="local-time">00m 01s 23ms</div>
+          <div class="foot">[ Stable Experience Flow ]</div>
+        </div>
+      </div>
+
+      <div class="viewport">
+        <div class="hud-corner hc-tl">Density Anomaly<br>Sector Detected</div>
+        <div class="hud-corner hc-tr">Horizon Approach<br>Grid Active</div>
+        <div class="rings"></div>
+        <div class="rings r2"></div>
+        <div class="rings r3"></div>
+        <div class="blackhole">
+          <div class="gaze-reticle">
+            <span></span>
+            <div class="rlabel">Your Gaze</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Gravitational Status</h3>
+        <p class="desc">Simulation variables reflecting extreme spatial curve constraints.</p>
+
+        <div class="slider-row">
+          <div class="label-row"><span>Time Dilation Factor</span><b>47.3x</b></div>
+          <div class="slider-track"><div class="slider-fill"></div></div>
+        </div>
+
+        <div class="stat-card" style="margin-top:22px;">
+          <div class="label">Horizon Proximity</div>
+          <div class="value">1.4 Rs</div>
+          <div class="foot">Critical Threshold Zone</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Gravitational Field</div>
+          <div class="value" style="font-size:19px;">8.42 × 10¹² m/s²</div>
+          <div class="foot">Extreme Local Infall</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bottombar">
+      <div class="online"><span class="dot"></span> Exhibit System Online &nbsp;•&nbsp; Gaze_Tracking_Sensors_Stable // 120 FPS</div>
+      <div>Cosmic Exhibits Series • Horizon v2.1</div>
+    </div>
+
+    <button id="btn-to-summary" style="position:absolute;bottom:90px;right:48px;background:var(--panel);border:1px solid var(--cyan);color:var(--cyan);font-family:var(--font-mono);font-size:11px;letter-spacing:0.06em;text-transform:uppercase;padding:12px 20px;border-radius:8px;cursor:pointer;z-index:6;">End Session →</button>
+  </section>
+
+  <!-- ============ SCREEN 4: JOURNEY SUMMARY ============ -->
+  <section id="screen-summary" class="screen" aria-label="Journey summary screen">
+    <div class="topbar" style="visibility:hidden;"><div></div></div>
+    <div class="summary-header">
+      <div class="eyebrow">Simulation Archive</div>
+      <h2>Your Horizon Journey Summary</h2>
+    </div>
+
+    <div class="stat-strip">
+      <div class="stat-tile">
+        <div class="label">Total Space Duration</div>
+        <div class="value">1 min 30 sec</div>
+        <div class="foot">experienced as 47 Earth years</div>
+      </div>
+      <div class="stat-tile cyan">
+        <div class="label">Event Horizon Approach</div>
+        <div class="value">1.2 Rs</div>
+        <div class="foot">near singularity proximity limit</div>
+      </div>
+      <div class="stat-tile">
+        <div class="label">Max Dilation Factor</div>
+        <div class="value">156.7x</div>
+        <div class="foot">peak relativistic time difference</div>
+      </div>
+      <div class="stat-tile cyan">
+        <div class="label">Space Gravity Pulses</div>
+        <div class="value">2,847 Units</div>
+        <div class="foot">kinetic gravitational waves generated</div>
+      </div>
+    </div>
+
+    <div class="summary-lower">
+      <div class="panel chart-panel">
+        <h3>Gravitational Acceleration Path</h3>
+        <span class="axis-note">Y: Dilation Factor / X: Trip Time Duration</span>
+        <div class="bars">
+          <div class="bar" style="height:22%"><span class="t">0s</span></div>
+          <div class="bar" style="height:32%"><span class="t">15s</span></div>
+          <div class="bar" style="height:46%"><span class="t">30s</span></div>
+          <div class="bar" style="height:60%"><span class="t">45s</span></div>
+          <div class="bar" style="height:72%"><span class="t">60s</span></div>
+          <div class="bar peak" style="height:100%"><span class="t">75s</span></div>
+          <div class="bar" style="height:78%"><span class="t">90s</span></div>
+          <div class="bar" style="height:48%"><span class="t">105s</span></div>
+        </div>
+      </div>
+      <div class="panel qr-panel">
+        <h3>Save Telemetry Data</h3>
+        <p class="desc">Scan with your mobile device to view your dilation trajectory dashboard online.</p>
+        <div class="qr-box" role="img" aria-label="QR code placeholder to save telemetry data"></div>
+        <div class="scan">Scan QR Code</div>
+        <div class="avail">Available until session logs clear in 15 minutes.</div>
+      </div>
+    </div>
+
+    <div class="bottombar">
+      <div class="online"><span class="dot"></span> Exhibit System Online &nbsp;•&nbsp; Gaze_Tracking_Sensors_Stable // 120 FPS</div>
+      <div>Cosmic Exhibits Series • Horizon v2.1</div>
+    </div>
+
+    <button id="btn-to-exit" style="position:absolute;bottom:90px;right:48px;background:var(--panel);border:1px solid var(--cyan);color:var(--cyan);font-family:var(--font-mono);font-size:11px;letter-spacing:0.06em;text-transform:uppercase;padding:12px 20px;border-radius:8px;cursor:pointer;z-index:6;">Continue →</button>
+  </section>
+
+  <!-- ============ SCREEN 5: EXIT / THANK YOU ============ -->
+  <section id="screen-exit" class="screen" aria-label="Exit screen">
+    <div class="exit-bg" aria-hidden="true"></div>
+    <div class="topbar">
+      <div class="brand">Cosmic Exploration Completed</div>
+      <div class="status-tag"><span class="dot"></span> Escape Trajectory Stable</div>
+    </div>
+    <div class="exit-content">
+      <div class="session-pill"><span class="dot" style="width:6px;height:6px;border-radius:50%;background:var(--cyan);box-shadow:var(--glow-cyan);"></span> Session Log: Complete Success</div>
+      <h1>You Survived the Black Hole</h1>
+      <p class="sub">Thank you for visiting Black Hole Horizon. Your data file has been securely compiled and integrated into our cosmic archive.</p>
+    </div>
+    <div class="exit-lower">
+      <div class="reset-block">
+        <button class="gaze-target" id="btn-reset" aria-label="Reset simulation">
+          <span class="gaze-corner tl"></span><span class="gaze-corner tr"></span>
+          <span class="gaze-corner bl"></span><span class="gaze-corner br"></span>
+          <span class="core"></span>
+        </button>
+        <div class="idle-label">Reset Simulation</div>
+      </div>
+      <div class="giftshop-card">
+        <h4>Keep Exploring</h4>
+        <p>Step right to exit. Take home custom 3D gravity-well prints and telemetry maps from the museum gift shop.</p>
+        <button class="gift-btn">Visit the Gift Shop →</button>
+      </div>
+    </div>
+    <div class="bottombar">
+      <div>Powered by the Museum of Astrophysics &amp; Space Sciences</div>
+      <div>Cosmic Interactive Cockpit v2.1</div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+  (function(){
+    const screens = {
+      idle: document.getElementById('screen-idle'),
+      calibration: document.getElementById('screen-calibration'),
+      dashboard: document.getElementById('screen-dashboard'),
+      summary: document.getElementById('screen-summary'),
+      exit: document.getElementById('screen-exit'),
+    };
+
+    function showScreen(id){
+      Object.values(screens).forEach(s => s.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      document.querySelectorAll('.devnav button').forEach(b=>{
+        b.classList.toggle('on', b.dataset.goto === id);
+      });
+      if(id === 'screen-calibration'){
+        startCalibration();
+      }
+      if(id === 'screen-dashboard'){
+        startLocalClock();
+      }
+    }
+
+    // --- Screen 1 -> 2 ---
+    document.getElementById('btn-begin').addEventListener('click', () => {
+      showScreen('screen-calibration');
+    });
+
+    // --- Screen 2 -> 3 (auto after calibration completes, or manual skip) ---
+    let calibTimer = null;
+    function startCalibration(){
+      const fill = document.getElementById('calib-fill');
+      fill.style.width = '0%';
+      requestAnimationFrame(() => { fill.style.width = '100%'; });
+      clearTimeout(calibTimer);
+      calibTimer = setTimeout(() => showScreen('screen-dashboard'), 3200);
+    }
+    document.getElementById('btn-skip-calibration').addEventListener('click', () => {
+      clearTimeout(calibTimer);
+      showScreen('screen-dashboard');
+    });
+
+    // --- Screen 3 local clock (cosmetic) ---
+    let clockInterval = null;
+    function startLocalClock(){
+      clearInterval(clockInterval);
+      let ms = 1230, s = 1, m = 0;
+      const el = document.getElementById('local-time');
+      clockInterval = setInterval(() => {
+        ms += 130;
+        if(ms >= 1000){ ms -= 1000; s++; }
+        if(s >= 60){ s -= 60; m++; }
+        el.textContent = `${String(m).padStart(2,'0')}m ${String(s).padStart(2,'0')}s ${String(ms).padStart(3,'0')}ms`;
+      }, 130);
+    }
+
+    // --- Screen 3 -> 4 ---
+    document.getElementById('btn-to-summary').addEventListener('click', () => {
+      clearInterval(clockInterval);
+      showScreen('screen-summary');
+    });
+
+    // --- Screen 4 -> 5 ---
+    document.getElementById('btn-to-exit').addEventListener('click', () => {
+      showScreen('screen-exit');
+    });
+
+    // --- Screen 5 -> 1 (reset loop) ---
+    document.getElementById('btn-reset').addEventListener('click', () => {
+      showScreen('screen-idle');
+    });
+
+    // --- Dev nav (remove for kiosk deployment) ---
+    document.querySelectorAll('.devnav button').forEach(btn => {
+      btn.addEventListener('click', () => showScreen(btn.dataset.goto));
+    });
+
+  })();
+</script>
+
+</body>
+</html>
